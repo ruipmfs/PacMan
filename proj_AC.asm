@@ -1,20 +1,33 @@
 DISPLAYS   				EQU 0A000H  ; endereço dos displays de 7 segmentos (periférico POUT-1)
 
 FATOR_CONV_HEX_DEC      EQU 64H
+
 MAX_COUNTER             EQU 100
+
 FUNDO_COMECA            EQU 0
+EFEITO_SONORO			EQU 0
+
+
 APAGA_ECRA				EQU 6002H		; endereço do comando que apaga um ecrã
 APAGA_AVISO				EQU 6040H		; endereço do comando que apaga o aviso do ecrã
 ALTURA_ECRA				EQU 32			; numero de linhas do ecrã
+
 ADICIONAR_FRONTAL		EQU 6046H		; 
 APAGAR_FRONTAL			EQU 6044H
 ADICIONAR_FUNDO			EQU 6042H		; endereço do comando que adiciona um fundo
+
+ADICIONAR_SOM			EQU 6048H
+PLAY_SOM				EQU 605AH
+
 LINHA_INICIAL_PACMAN	EQU 27			; linha inicial do pacman
 COL_INICIAL_PACMAN		EQU 30			; coluna inicial do pacman
 LINHA_INICIAL_GHOST		EQU 14			; linha inicial dos fantasmas
 COL_INICIAL_GHOST		EQU 31			; coluna inicial dos fantasmas
+
 TECLA_INCREMENTA		EQU 7
 TECLA_DECREMENTA		EQU 3
+TECLA_SOM				EQU 0FH
+
 COUNTER_INIT			EQU 0
 
 TEC_LIN    			EQU 0C000H  ; endereço das linhas do teclado (periférico POUT-2)
@@ -24,6 +37,7 @@ DEFINE_LINHA    	EQU 600AH      	; endereço do comando para definir a linha
 DEFINE_COLUNA   	EQU 600CH      	; endereço do comando para definir a coluna
 DEFINE_PIXEL    	EQU 6012H      	; endereço do comando para escrever um pixel
 
+MASCARA				EQU 0FH
 NAO_HA_TECLA		EQU 0FFFH	; inicializa o valor de saida do teclado quando nao esta a ser clicado (e um valor impossivel)
 
 
@@ -36,6 +50,7 @@ pos_pacman:			STRING 0, 30					; variavel que guarda a posicao (linha e coluna p
 pos_ghost:			STRING 0, 30					; variavel que guarda a posicao (linha e coluna por esta ordem) atual do ovni em ecra (inicializada com a posicao onde os ovnis são gerados
 tecla:				WORD NAO_HA_TECLA				; variavel que guarda a tecla a ser primida no momento (inicializada com um valor impossivel)
 counter:			WORD COUNTER_INIT
+tecla_anterior:		WORD NAO_HA_TECLA
 
 imagem_pacman:	STRING 5,4 				; largura e altura da nave
 				WORD   0FFF0H			; cor do pacman (amarelo)
@@ -72,6 +87,7 @@ main:							; ciclo principal do jogo
 	CALL escreve_display
 	CALL incrementa_counter
 	CALL decrementa_counter
+	CALL ativa_efeito_sonoro
 	JMP main
 
 ;****************************
@@ -82,6 +98,7 @@ p_teclado:
 	PUSH R1
 	PUSH R2
 	PUSH R3
+	PUSH R5
 	
     MOV  R1, 8				; começa por procurar se há tecla primida na linha 4 (que corresponde ao numero 8
 	MOV  R2, TEC_LIN   		; endereço do periférico das linhas
@@ -89,6 +106,8 @@ p_teclado:
 ciclo_espera_tecla:         ; neste ciclo espera-se até uma tecla ser premida
 	MOVB [R2], R1     		; escrever no periférico de saída (linhas)
     MOVB R0, [R3]      	    ; ler do periférico de entrada (colunas)
+    MOV  R5, MASCARA
+    AND  R0, R5        		; elimina os bits 7..4, que estão "no ar" (teclado só liga aos bits 3..0) 
     CMP  R0, 0         		; há tecla premida?
 	JZ prox_linha			; se não, muda de linha e procura nessa
 converte:					; ciclo que converte o valor que recebemos quando clicamos numa tecla no valor dessa mesma tecla
@@ -109,12 +128,14 @@ converte_col:
 	JMP fim_teclado
 prox_linha:					
 	SHR R1, 1				; divide a linha atual por 2 para procurar na linha anterior 
+	CMP R1, 0
 	JNZ ciclo_espera_tecla	; enquanto não estivermos a testar a linha 1, repete a procura
 	MOV R2, NAO_HA_TECLA	; se tivermos testado todas então nada está a ser primido (NAO_HA_TECLA tem um valor impossivel para uma tecla)
 fim_teclado:
 	MOV R0, tecla			
 	MOV [R0], R2			; guarda na variavel tecla o valor da tecla primida (se nada tiver sido primido guarda um valor impossivel para não atrapalhar comparações futuras)
 	
+	POP R5
 	POP R3
 	POP R2
 	POP R1
@@ -249,8 +270,8 @@ incrementa_counter:
 	MOV R0, counter					
 	MOV R0, [R0]
 	MOV R1, MAX_COUNTER
-	CMP R0, R1						; compara o counter com 100
-	JLT incrementa			        ; se for menor que 100, então pode incrementar
+	CMP R0, R1							; compara o counter com 100
+	JGE fim_incrementa			        ; se for menor que 100, então pode incrementar
 	
 	
 incrementa:
@@ -260,10 +281,11 @@ incrementa:
 	CMP R0, R1						; compara a tecla a ser primida no instante com a tecla '7'
 	JNZ fim_incrementa				; se não forem iguais, sai da rotina
 	
-	MOV R0, counter
-	MOV R0, [R0]
+	MOV R1, counter
+	MOV R0, [R1]
+	CALL time_burner
 	ADD R0, 1
-	MOV [R0], R0
+	MOV [R1], R0
 	
 fim_incrementa:
 	POP R2
@@ -279,8 +301,8 @@ decrementa_counter:
 	
 	MOV R0, counter					
 	MOV R0, [R0]
-	CMP R0, 0				; compara o counter com 0
-	JGT decrementa			; se for maior que 0, então pode decrementar
+	CMP R0, 0					; compara o counter com 0
+	JLE fim_decrementa			; se for maior que 0, então pode decrementar
 	
 	
 decrementa:
@@ -290,10 +312,11 @@ decrementa:
 	CMP R0, R1						; compara a tecla a ser primida no instante com a tecla '3'
 	JNZ fim_decrementa				; se não forem iguais, sai da rotina
 	
-	MOV R0, counter
-	MOV R0, [R0]
+	MOV R1, counter
+	MOV R0, [R1]
+	CALL time_burner
 	SUB R0, 1
-	MOV [R0], R0
+	MOV [R1], R0
 	
 fim_decrementa:
 	POP R2
@@ -301,6 +324,33 @@ fim_decrementa:
 	POP R0
 	RET
 
+;********************************************
+
+ativa_efeito_sonoro:
+	PUSH R0
+	PUSH R1
+	PUSH R2
+	
+	MOV R0, tecla
+	MOV R0, [R0]
+	MOV R1, TECLA_SOM
+	CMP R0, R1
+	JNZ fim_sfx
+
+	MOV R1, tecla_anterior
+	MOV R1, [R1]
+	CMP R1, R0
+	JZ fim_sfx
+
+	CALL som
+	
+fim_sfx:
+	MOV R1, tecla_anterior
+	MOV [R1], R0
+	POP R2
+	POP R1
+	POP R0
+	RET
 
 ;********************************************
 fundo:
@@ -315,6 +365,23 @@ fundo:
 	POP R0
 	RET
 
+;********************************************
+som:
+	PUSH R0
+	PUSH R1
+	PUSH R2
+	
+	MOV R0, ADICIONAR_SOM
+	MOV R1, PLAY_SOM
+	MOV R2, EFEITO_SONORO
+	MOV [R0], R2
+	MOV [R1], R2
+	
+	POP R2
+	POP R1
+	POP R0
+	RET
+
 ;********************************************************
 escreve_display:
     PUSH R0
@@ -324,6 +391,8 @@ escreve_display:
 
     ; converte o valor de hexadecimal para decimal
     MOV R2, FATOR_CONV_HEX_DEC
+    MOV R1, counter
+    MOV R1, [R1]
     MOV R0, R1                        ; preserva o valor de R1 (energia atual da nave)
     DIV R0, R2 
     MOD R1, R2
@@ -344,3 +413,21 @@ escreve_display:
     POP R1
     POP R0
     RET
+
+;*********************************************************************
+
+time_burner:
+	PUSH R0
+	PUSH R1
+
+	MOV R0, 0
+	MOV R1, 10000
+
+ciclo:
+	ADD R0, 1
+	CMP R0, R1
+	JNZ ciclo
+
+	POP R1
+	POP R0
+	RET
