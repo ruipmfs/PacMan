@@ -246,13 +246,17 @@ start:
 	CALL desenha_obj					; desenha pacmman na sua posição inicial
 	MOV R0, pos_pacman
 	MOV [R0], R2						; repõe posição inicial do pacman
+	ADD R0, 1
+	MOV [R0], R1
 	
 	MOV R1, LINHA_INICIAL_GHOST
 	MOV R2, COL_INICIAL_GHOST
 	MOV R3, imagem_ghost
 	CALL desenha_obj 					; desenha fantasma na sua posição inicial
 	MOV R0, pos_ghost
-	MOV [R0], R2						; repõe posição inicial do fantasma
+	MOV [R0], R2						; repõe coluna inicial do fantasma
+	ADD R0, 1							; passa para a linha
+	MOV [R0], R1						; repõe linha inicial do fantasma
 	
 	POP R3
 	POP R2
