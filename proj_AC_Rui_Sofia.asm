@@ -624,9 +624,9 @@ next_ghost:
 	MOV R0, pos_ghost
 	MOVB [R0], R1
 	ADD R0, 1
-	MOVB [R0], R2					; atualiza a variável da posição do ovni 
+	MOVB [R0], R2					; atualiza a variável da posição do fantasma 
 	
-	CALL desenha_obj				; desenha o ovni na sua posição atualizada
+	CALL desenha_obj				; desenha o fantasma na sua posição atualizada
 
 fim_fantasma:
 	POP R10
@@ -769,6 +769,21 @@ fim_desenha_obj:
 	POP R1
 	RET
 ;***************************
+
+; apaga_obj(linha, coluna, cor)
+
+; Argumentos:
+;   - R1: linha
+;   - R2: coluna
+;   - R3: objeto
+
+; Retorno: Nenhum
+
+; Descrição: Apaga o objeto recebido começando
+; na linha e coluna recebidas com a cor presente
+; no próprio objeto
+
+;***************************
 apaga_obj:
 	PUSH R1
 	PUSH R2
@@ -814,6 +829,22 @@ fim_apaga_obj:
 	POP R2
 	POP R1
 	RET
+;*********************************
+apaga_xs:
+	PUSH R1
+	PUSH R2
+	PUSH R3
+	
+	MOV R1, R6			; guarda em R1, R2 as componentes da posicao do X para passar como argumento a rotina apaga_obj
+	MOV R2, R5
+	MOV R3, imagem_x
+	CALL apaga_obj		; apaga o X desejado
+	
+	POP R3
+	POP R2
+	POP R1
+	RET	
+	
 ;***************************
 
 ; start
@@ -886,6 +917,16 @@ start:
 	MOV R1, [R0]
 	MOV R1, 0
 	MOV [R0], R1						; desativa a flag pausa
+
+	MOV R0, xs_apagados
+	MOV R1, 0
+	MOVB [R0], R1
+	ADD R0, 1
+	MOVB [R0], R1
+	ADD R0, 1
+	MOVB [R0], R1
+	ADD R0, 1
+	MOVB [R0], R1
 	
 	POP R3
 	POP R2
@@ -921,33 +962,33 @@ verifica_colisoes:
 	MOV R7, LIM_CIM_X
 	MOV R8, LIM_ESQ_X
 	
-	CMP R1, R7					
+	CMP R3, R7					
 	JGT cima_baixo				; se o pacman estiver a baixo do topo dos X's de baixo verifica se esta a colidir com algum
 								; se nao, verifica a proxima comparacao
-	CMP R3, R5					
+	CMP R1, R5					
 	JLT cima_baixo				; se o pacman estiver a cima da parte de baixo dos X's de cima verifica se esta a colidir com algum				
 								; se nao, verifica a proxima comparacao
-	CMP R2, R8					
-	JLT esq_dir					; se o pacman estiver a esquerda da direita dos X's da esquerda verifica se esta a colidir com algum
-								; se nao, verifica a proxima comparacao
-	CMP R4, R6						
+	CMP R4, R8					
 	JGT esq_dir					; se o pacman estiver a direita da esquerda dos X's da direita verifica se esta a colidir com algum
+								; se nao, verifica a proxima comparacao
+	CMP R2, R6						
+	JLT esq_dir					; se o pacman estiver a esquerda da direita dos X's da esquerda verifica se esta a colidir com algum
 								; se nao, verifica a colisao com fantasmas
 	JMP verifica_ghost
 	
 cima_baixo:
-	CMP R2, R8					
-	JGT next_cb					; se o pacman estiver a direita da direita dos X's da esquerda testa o proximo lado	
-								; se nao, entao eh o X do lado esquerdo
+	CMP R4, R8					
+	JLT next_cb					; se o pacman estiver a esquerda da esquerda dos X's da direita testa o proximo lado	
+								; se nao, entao eh o X do lado direito
 	CALL linha_mais_prox		; ve qual eh a linha mais proxima para decidir se é do canto superior ou inferior (guarda em R6)
-	MOV R5, 1					; guarda em R5 a coluna 1 (coluna dos X's da esquerda)
+	MOV R5, 59					; guarda em R5 a coluna 59 (coluna dos X's da direita)
 	CALL apaga_xs				; apaga o X
 	
 	MOV R5, xs_apagados			
 	CMP R6, 1					; vê se eh o X do canto sup esquerdo ou canto inf esquerdo
-	JZ  cse						; se for o do canto superior esquerdo ativa a flag que diz se esse X ja foi apanhado
-	ADD R5, 2					; se nao ativa a flag que diz se o X do canto inferior esquerdo ja foi apanhado
-cse:
+	JZ  csd						; se for o do canto superior direito ativa a flag que diz se esse X ja foi apanhado
+	ADD R5, 2					; se nao ativa a flag que diz se o X do canto inferior direito ja foi apanhado
+csd:
 	MOV R9, 1
 	MOVB [R5], R9
 
@@ -955,18 +996,18 @@ cse:
 
 ;os comentarios dos proximos 3 blocos de 18 linhas sao semelhantes aos das 18 linhas anteriores	
 next_cb:
-	CMP R4, R6
-	JLT verifica_ghost			
+	CMP R2, R6
+	JGT verifica_ghost			
 	
 	CALL linha_mais_prox
-	MOV R5, 59
+	MOV R5, 1
 	CALL apaga_xs
 	
 	MOV R5, xs_apagados
 	CMP R6, 1
-	JZ csd
+	JZ cse
 	ADD R5, 2
-csd:
+cse:
 	ADD R5, 1
 	MOV R9, 1
 	MOVB [R5], R9
@@ -974,36 +1015,36 @@ csd:
 	JMP fim_colisoes
 	
 esq_dir:
-	CMP R1, R7
-	JLT next_ed					; se o pacman estiver a esquerda da esquerda dos X's da direita testa o proximo lado 
-								; se nao, entao eh o X do lado direito
-	MOV R6, 1					; guarda em R6 a linha 1 (linha dos X's de cima)
+	CMP R3, R7
+	JLT next_ed					; se o pacman estiver a cima do topo dos X's de baixo testa o proximo lado 
+								; se nao, entao eh o X de baixo
+	MOV R6, 27					; guarda em R6 a linha 27 (linha dos X's de baixo)
 	CALL coluna_mais_prox		; ve qual eh a coluna mais proxima para decidir se são os cantos da esquerda ou da direita (guarda em R6)
 	CALL apaga_xs				; apaga o X
 	
 	MOV R6, xs_apagados			
-	CMP R5, 1					; vê se eh o X do canto sup direito ou canto inf direito
-	JZ csupe					; se for o do canto superior esquerdo ativa a flag que diz se esse X ja foi apanhado
-	ADD R6, 1					; se nao ativa a flag que diz se o X do canto inferior???? esquerdo ja foi apanhado
-csupe:
+	CMP R5, 1					; vê se eh o X do canto inf direito ou canto inf esquerdo
+	JZ infe						; se for o do canto inf esquerdo ativa a flag que diz se esse X ja foi apanhado
+	ADD R6, 1					; se nao ativa a flag que diz se o X do canto inferior esquerdo ja foi apanhado
+infe:
 	MOV R9, 1
 	MOVB [R6], R9
 	
 	JMP fim_colisoes
 
 next_ed:
-	CMP R3, R5
+	CMP R1, R5
 	JGT verifica_ghost
 	
-	MOV R6, 27
+	MOV R6, 1
 	CALL coluna_mais_prox
 	CALL apaga_xs
 	
 	MOV R6, xs_apagados
 	CMP R5, 1
-	JZ cinfe
+	JZ supe
 	ADD R6, 1
-cinfe:
+supe:
 	ADD R6, 2
 	MOV R9, 1
 	MOVB [R6], R9
@@ -1059,7 +1100,286 @@ fim_colisoes:
 	POP R1
 	POP R0
 	RET
+;**********************************************************************
 
+move_c_b:
+	PUSH R0
+	PUSH R1
+	PUSH R2
+	PUSH R3
+	PUSH R4
+	PUSH R5
+	PUSH R6
+	PUSH R7
+	PUSH R8
+	PUSH R9
+	
+	
+	MOV R0, pos_pacman
+	MOVB R1, [R0]
+	ADD R0, 1
+	MOVB R2, [R0]					; guarde as componentes da posição atual do pacman
+	
+	MOV R3, R5;LIM_CIM				; se a coluna for LIM_CIM, o pacman chegou ao limite superior ecrã e não pode andar mais
+	CMP R1, R3						; logo sai do processo
+	JZ fim_cb
+
+	MOV R3, R6;LIM_CIM_C	
+	CMP R1, R3							
+	JNZ c_b							; se a linha do pacman nao for a parte de baixo da caixa pode andar
+	MOV R3, R7;LIM_DIR_C			; se for testa o proximo
+	CMP R2, R3						
+	JLE c_b							; se o pacman estiver a esquerda da parte esquerda da caixa pode andar
+	MOV R3, R8;LIM_ESQ_C			; se nao testa o proximo
+	CMP R2, R3
+	JGE c_b							; se o pacman estiver a direita da parte direita da caixa pode andar
+	JMP fim_cb						; se nao nao anda e sai da rotina
+	
+c_b:	
+	MOV R3, imagem_pacman				
+	CALL apaga_obj					; apaga o pacman da sua posição atual
+	ADD R1, R9						; altera a sua linha em 1 (para cima ou baixo dependendo do que é passado como argumento em R9)
+	MOV R3, imagem_pacman_aberto_c	
+	CALL desenha_obj				; desenha o pacman de boca aberta na nova posicao
+	CALL time_burner				; rotina para queimar tempo para permitir que o user veja o efeito
+	MOV R3, imagem_pacman
+	CALL desenha_obj				; desenha o pacman de boca fechada na mesma posicao
+	SUB R0, 1
+	MOVB [R0], R1					; atualiza a linha do pacman na variavel de posicao
+	
+	JMP fim_cb
+
+fim_cb:
+	
+	POP R9
+	POP R8
+	POP R7
+	POP R6
+	POP R5
+	POP R4
+	POP R3
+	POP R2
+	POP R1
+	POP R0
+	RET
+
+;*****************************************************************************
+; COMENTARIOS SEMELHANTES AOS DA ROTINA ANTERIOR (mas para esquerda e direita)
+move_d_e:
+	PUSH R0
+	PUSH R1
+	PUSH R2
+	PUSH R3
+	PUSH R4
+	PUSH R5
+	PUSH R6
+	PUSH R7
+	PUSH R8
+	PUSH R9
+	
+	MOV R0, pos_pacman
+	MOVB R1, [R0]
+	ADD R0, 1
+	MOVB R2, [R0]					
+	
+	MOV R3, R5;LIM_DIR					
+	CMP R2, R3						
+	JZ fim_de 
+	MOV R3, R6;LIM_DIR_C				
+	CMP R2, R3						
+	JNZ d_e
+	MOV R3, R7;LIM_CIM_C
+	CMP R1, R3
+	JGE d_e
+	MOV R3, R8;LIM_BAIX_C
+	CMP R1, R3
+	JLE d_e
+	
+	JMP fim_de
+d_e:	
+	MOV R3, imagem_pacman				
+	CALL apaga_obj					
+	ADD R2, R9						
+	MOV R3, imagem_pacman_aberto_d
+	CALL desenha_obj				
+	CALL time_burner
+	MOV R3, imagem_pacman
+	CALL desenha_obj
+	MOVB [R0], R2					
+	
+	JMP fim_de
+
+fim_de:
+	
+	
+	POP R9
+	POP R8
+	POP R7
+	POP R6
+	POP R5
+	POP R4
+	POP R3
+	POP R2
+	POP R1
+	POP R0
+	RET
+
+;********************************************************************
+testa_colisao_caixa_vert:
+	PUSH R1
+	PUSH R2
+	PUSH R7
+	PUSH R8
+	PUSH R9
+	
+	CMP R1, R7
+	JZ testa_coluna				; se houver colisao vertical testa a coluna
+	JMP nao_colide				; se nao, nao colide
+testa_coluna:
+	CMP R2, R8					
+	JGE testa_col_fim			; se estiver a direita do limite esquerdo da caixa testa o outro limite
+	JMP nao_colide				; se nao, nao colide e pode andar verticalmente
+testa_col_fim:
+	CMP R2, R9					
+	JGT nao_colide				; se estiver a direita do limite direito da caixa nao colide
+	MOV R10, 1					; ativa a "flag" de colisao do fantasma com a caixa
+	JMP fim_testa_coli			; sai da rotina
+nao_colide:
+	MOV R10, 0					; ativa a "flag" de NAO colisao do fantasma com a caixa e pode andar verticalmente
+	
+fim_testa_coli:
+	POP R9
+	POP R8
+	POP R7
+	POP R2
+	POP R1
+	RET
+;************************************************
+; COMENTARIOS IGUAIS A ROTINA ANTERIOR	
+testa_colisao_caixa_horiz:
+	PUSH R1
+	PUSH R2
+	PUSH R7
+	PUSH R8
+	PUSH R9
+	
+	CMP R2, R7
+	JZ testa_linha
+	JMP nao_colidiu
+testa_linha:
+	CMP R1, R8
+	JGT testa_coli_fim
+	JMP nao_colidiu
+testa_coli_fim:
+	CMP R1, R9
+	JGT nao_colidiu
+	MOV R10, 1
+	JMP fim_testa_coli_h
+nao_colidiu:
+	MOV R10, 0
+	
+fim_testa_coli_h:
+	POP R9
+	POP R8
+	POP R7
+	POP R2
+	POP R1
+	RET
+	
+;********************************************
+
+; time_burner
+
+; Retorno: nenhum
+
+; Descrição: Itera uma variável 10000 vezes
+; com o objetivo de criar um 'delay' controlado
+
+;********************************************
+
+
+time_burner:
+	PUSH R0
+	PUSH R1
+
+	MOV R0, 0
+	MOV R1, 10000
+
+ciclo:
+	ADD R0, 1			; adiciona 1 ao R0
+	CMP R0, R1			; vê se R0 já chegou a 10000
+	JNZ ciclo 			; se não, repete o ciclo
+						; se sim, sai da rotina
+	POP R1
+	POP R0
+	RET
+	
+	
+;************************************************
+
+	
+;**********************************************
+linha_mais_prox:
+	PUSH R1
+	PUSH R2
+
+	MOV R2, 23					; 23 é linha superior dos X's de baixo -5 (altura do pacman)
+	CMP R1, R2
+	JGE em_baixo				; se a linha do pacman for maior ou igual a 23 entao é um X de baixo
+	MOV R6, 1					; se nao, é um X de cima
+	JMP fim_lmp
+	
+em_baixo:
+	MOV R6, 27
+	
+fim_lmp:
+	POP R2
+	POP R1
+	RET
+	
+;********************************************
+
+coluna_mais_prox:
+	PUSH R1
+	PUSH R2
+
+	MOV R2, 56					; 56 é coluna esquerda dos X's da direita -5 (altura do pacman)
+	CMP R1, R2
+	JGE a_esq					; se a coluna do pacman for maior ou igual a 56 entao é um X da direita
+	MOV R5, 1					; se nao, é um X da esquerda
+	JMP fim_cmp
+	
+a_esq:
+	MOV R5, 59
+	
+fim_cmp:
+	POP R2
+	POP R1
+	RET
+	
+;************************************************
+
+vitoria:
+	PUSH R1
+	PUSH R2
+
+	MOV R1, xs_apagados
+	MOV R3, 0
+vitoria_aux:
+	MOVB R2, [R1]				; guarda em R2 o valor presente na posicao 'R3' da variavel xs_apagados
+	CMP R2, 1					; ve se a flag está a um (ou seja, se esse X ja foi apanhado)
+	JZ rec						; se estiver -> adiciona um ao contador de X's apanhados (R3)
+	JMP fim_vitoria				; se nao, sai da rotina
+rec:
+	ADD R3, 1					; incrementa o contador de X's apanhados	
+	ADD R1, 1					; ve o proximo elemento da variavel
+	JMP vitoria_aux				
+	
+
+fim_vitoria:	
+	POP R2
+	POP R1
+	RET
 
 
 ;*********************************************
@@ -1170,183 +1490,7 @@ fundo_fim:
 	POP R0
 	RET	
 	
-;*********************************************************
 
-
-
-;*********************************************
-
-;********************************************
-
-; time_burner
-
-; Retorno: nenhum
-
-; Descrição: Itera uma variável 10000 vezes
-; com o objetivo de criar um 'delay' controlado
-
-;********************************************
-
-
-time_burner:
-	PUSH R0
-	PUSH R1
-
-	MOV R0, 0
-	MOV R1, 10000
-
-ciclo:
-	ADD R0, 1			; adiciona 1 ao R0
-	CMP R0, R1			; vê se R0 já chegou a 10000
-	JNZ ciclo 			; se não, repete o ciclo
-						; se sim, sai da rotina
-	POP R1
-	POP R0
-	RET
-	
-	
-;************************************************
-apaga_xs:
-	PUSH R1
-	PUSH R2
-	PUSH R3
-	
-	MOV R1, R6
-	MOV R2, R5
-	MOV R3, imagem_x
-	CALL apaga_obj
-	
-	POP R3
-	POP R2
-	POP R1
-	RET
-	
-;**********************************************
-linha_mais_prox:
-	PUSH R1
-	PUSH R2
-
-	MOV R2, 23
-	CMP R1, R2
-	JGE em_baixo
-	MOV R6, 1
-	
-em_baixo:
-	MOV R6, 27
-	
-	POP R2
-	POP R1
-	RET
-	
-;********************************************
-
-coluna_mais_prox:
-	PUSH R1
-	PUSH R2
-
-	MOV R2, 56
-	CMP R1, R2
-	JGE a_esq
-	MOV R5, 1
-	
-a_esq:
-	MOV R5, 59
-	
-	POP R2
-	POP R1
-	RET
-	
-;************************************************
-
-vitoria:
-	PUSH R1
-	PUSH R2
-
-	MOV R1, xs_apagados
-	MOV R3, 0
-vitoria_aux:
-	MOV R2, [R1]
-	CMP R2, 1
-	JZ rec
-	JMP fim_vitoria
-rec:
-	ADD R3, 1
-	ADD R1,1
-	JMP vitoria_aux
-	
-
-fim_vitoria:	
-	POP R2
-	POP R1
-	RET
-;****************************************************
-
-	
-;****************************************************
-
-
-	
-;*********************************************
-testa_colisao_caixa_vert:
-	PUSH R1
-	PUSH R2
-	PUSH R7
-	PUSH R8
-	PUSH R9
-	
-	CMP R1, R7
-	JZ testa_coluna
-	JMP nao_colide
-testa_coluna:
-	CMP R2, R8
-	JGE testa_col_fim
-	JMP fim_testa_coli
-testa_col_fim:
-	CMP R2, R9
-	JGT nao_colide
-	MOV R10, 1
-	JMP fim_testa_coli
-nao_colide:
-	MOV R10, 0
-	
-fim_testa_coli:
-	POP R9
-	POP R8
-	POP R7
-	POP R2
-	POP R1
-	RET
-	
-testa_colisao_caixa_horiz:
-	PUSH R1
-	PUSH R2
-	PUSH R7
-	PUSH R8
-	PUSH R9
-	
-	CMP R2, R7
-	JZ testa_linha
-	JMP nao_colidiu
-testa_linha:
-	CMP R1, R8
-	JGT testa_coli_fim
-	JMP fim_testa_coli_h
-testa_coli_fim:
-	CMP R1, R9
-	JGT nao_colidiu
-	MOV R10, 1
-	JMP fim_testa_coli_h
-nao_colidiu:
-	MOV R10, 0
-	
-fim_testa_coli_h:
-	POP R9
-	POP R8
-	POP R7
-	POP R2
-	POP R1
-	RET
-	
 ; **********************************************************************
 ; Rotinas de interrupção 
 ; **********************************************************************
@@ -1397,128 +1541,7 @@ rot_int_2:
      RFE
 	 
 	 
-;*****************************************************************************
-move_c_b:
-	PUSH R0
-	PUSH R1
-	PUSH R2
-	PUSH R3
-	PUSH R4
-	PUSH R5
-	PUSH R6
-	PUSH R7
-	PUSH R8
-	PUSH R9
-	
-	
-	MOV R0, pos_pacman
-	MOVB R1, [R0]
-	ADD R0, 1
-	MOVB R2, [R0]					; guarde as componentes da posição atual da nave
-	
-	MOV R3, R5;LIM_CIM			; se a coluna for LIMITE_DIR, a nave chegou ao limite direito ecrã e não pode andar mais
-	CMP R1, R3						; logo sai do processo
-	JZ fim_cb
 
-	MOV R3, R6;LIM_CIM_C				; se a coluna for LIMITE_DIR, a nave chegou ao limite direito ecrã e não pode andar mais
-	CMP R1, R3						; logo sai do processo
-	JNZ c_b
-	MOV R3, R7;LIM_DIR_C
-	CMP R2, R3
-	JLE c_b
-	MOV R3, R8;LIM_ESQ_C
-	CMP R2, R3
-	JGE c_b
-	
-	JMP fim_cb
-c_b:	
-	MOV R3, imagem_pacman				
-	CALL apaga_obj					; apaga a nave da sua posição atual
-	ADD R1, R9						; altera a sua coluna 1 posição para a esquerda
-	MOV R3, imagem_pacman_aberto_c
-	CALL desenha_obj				; desenha a nave na nova posição (isto faz o efeito de andar para a esquerda)
-	CALL time_burner
-	MOV R3, imagem_pacman
-	CALL desenha_obj
-	SUB R0, 1
-	MOVB [R0], R1					; guarda a nova coluna da nave na variável
-	
-	JMP fim_cb
-
-fim_cb:
-	
-	POP R9
-	POP R8
-	POP R7
-	POP R6
-	POP R5
-	POP R4
-	POP R3
-	POP R2
-	POP R1
-	POP R0
-	RET
-	
-move_d_e:
-	PUSH R0
-	PUSH R1
-	PUSH R2
-	PUSH R3
-	PUSH R4
-	PUSH R5
-	PUSH R6
-	PUSH R7
-	PUSH R8
-	PUSH R9
-	
-	MOV R0, pos_pacman
-	MOVB R1, [R0]
-	ADD R0, 1
-	MOVB R2, [R0]					; guarde as componentes da posição atual da nave
-	
-	MOV R3, R5;LIM_DIR					; se a coluna for LIMITE_DIR, a nave chegou ao limite direito ecrã e não pode andar mais
-	CMP R2, R3						; logo sai do processo
-	JZ fim_de 
-	MOV R3, R6;LIM_DIR_C				; se a coluna for LIMITE_DIR, a nave chegou ao limite direito ecrã e não pode andar mais
-	CMP R2, R3						; logo sai do processo
-	JNZ d_e
-	MOV R3, R7;LIM_CIM_C
-	CMP R1, R3
-	JGE d_e
-	MOV R3, R8;LIM_BAIX_C
-	CMP R1, R3
-	JLE d_e
-	
-	JMP fim_de
-d_e:	
-	MOV R3, imagem_pacman				
-	CALL apaga_obj					; apaga a nave da sua posição atual
-	ADD R2, R9						; altera a sua coluna 1 posição para a esquerda
-	MOV R3, imagem_pacman_aberto_d
-	CALL desenha_obj				; desenha a nave na nova posição (isto faz o efeito de andar para a esquerda)
-	CALL time_burner
-	MOV R3, imagem_pacman
-	CALL desenha_obj
-	MOVB [R0], R2					; guarda a nova coluna da nave na variável
-	
-	JMP fim_de
-
-fim_de:
-	
-	
-	POP R9
-	POP R8
-	POP R7
-	POP R6
-	POP R5
-	POP R4
-	POP R3
-	POP R2
-	POP R1
-	POP R0
-	RET
-	
-;**********************************************
 
 	
 

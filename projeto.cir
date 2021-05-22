@@ -9,14 +9,14 @@
   "primary screen width" : 1536,
   "primary screen height" : 864,
   "window" : {
-    "X absolute" : -7,
-    "Y absolute" : -7,
-    "X relative" : -7,
-    "Y relative" : -7,
-    "width" : 1550,
-    "height" : 838,
+    "X absolute" : 92,
+    "Y absolute" : 19,
+    "X relative" : 92,
+    "Y relative" : 19,
+    "width" : 1236,
+    "height" : 846,
     "leftRightDividerLocation" : 236,
-    "topBottomDividerLocation" : 664
+    "topBottomDividerLocation" : 698
   },
   "connections" : [ {
     "className" : "Connection",
@@ -542,6 +542,9 @@
         "X" : 557,
         "Y" : 134
       }, {
+        "X" : 553,
+        "Y" : 134
+      }, {
         "X" : 350,
         "Y" : 134
       } ]
@@ -713,11 +716,7 @@
     "moduleDelay" : 5,
     "positionX" : 206,
     "positionY" : 90,
-    "simGuiVisibleInSimulation" : true,
-    "simGuiXRelative" : 0,
-    "simGuiYRelative" : 0,
-    "simGuiWidth" : 674,
-    "simGuiHeight" : 837,
+    "simGuiVisibleInSimulation" : false,
     "startAutomatically" : true,
     "simulationMaster" : true,
     "clockPeriod" : 200,
@@ -1427,11 +1426,7 @@
     "moduleDelay" : 5,
     "positionX" : 782,
     "positionY" : 486,
-    "simGuiVisibleInSimulation" : true,
-    "simGuiXRelative" : 870,
-    "simGuiYRelative" : 419,
-    "simGuiWidth" : 140,
-    "simGuiHeight" : 159,
+    "simGuiVisibleInSimulation" : false,
     "columns" : 4,
     "key numbers radix" : "Hexadecimal",
     "key color" : "Default",
@@ -1500,7 +1495,7 @@
     "windowScreenWidthPixels" : 1024,
     "windowScreenHeightixels" : 512,
     "defaultPenColor" : 65280,
-    "image paths" : [ "assets\\images\\pacman_start.gif", "assets\\images\\game_background.jpg", "assets\\images\\pacman_exit.jpg", "assets\\images\\pacman_lose.gif", "assets\\images\\pacman_win.gif", "assets\\images\\src\\pacman_win_2.jpg" ],
+    "image paths" : [ "assets\\images\\src\\pacman_start_2.jpg", "assets\\images\\src\\game_background.jpg", "assets\\images\\src\\pacman_pause.jpg", "assets\\images\\src\\pacman_lose_1.jpg", "assets\\images\\src\\pacman_win_1.jpg", "assets\\images\\src\\pacman_exit.jpg" ],
     "addressable data" : {
       "className" : "ModuleExtensionMemoryMediaCenter",
       "elementID" : 83,
